@@ -2,9 +2,11 @@
 
 Clean Spotify Connect applet project for the Logitech Squeezebox Radio (`baby`).
 
-This repository starts with a framework-only release (`0.1.0`). It packages a
-Jive applet, an owned local Ogg bridge, and an ARM test helper. Spotify
-authentication and librespot integration are deliberately deferred.
+The `0.2.0` production release packages a Jive applet, the pinned Phase 7
+streaming-only librespot engine, an owned local Ogg bridge, and a status
+supervisor. First use shows Spotify's device-authorization pairing URL; the
+supported librespot credential cache then allows automatic reconnect after
+restart and reboot.
 
 The production path is compressed audio throughout:
 

@@ -4,3 +4,5 @@ build/*.log
 __pycache__/
 *.pyc
 .venv/
+.pytest_cache/
+native/librespot/target/

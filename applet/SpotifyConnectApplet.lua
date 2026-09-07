@@ -4,12 +4,22 @@ local Framework = require("jive.ui.Framework")
 local SimpleMenu = require("jive.ui.SimpleMenu")
 local Window = require("jive.ui.Window")
 local SpotifyService = require("applets.SpotifyConnect.SpotifyService")
+local SpotifyPlayback = require("applets.SpotifyConnect.SpotifyPlayback")
+local Timer = require("jive.ui.Timer")
 
 module(..., Framework.constants)
 oo.class(_M, Applet)
 
 function init(self)
     self.service = SpotifyService(self)
+    self.playback = SpotifyPlayback(self)
+    local settings = self:getSettings()
+    if settings.enabled and self.service:credentialsExist() then
+        Timer(2500, function()
+            self.service:start(false)
+            Timer(1500, function() self.playback:start("127.0.0.1", 17880, "/spotify.ogg") end, true):start()
+        end, true):start()
+    end
 end
 
 local function statusText(self)

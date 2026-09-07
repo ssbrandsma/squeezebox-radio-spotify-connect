@@ -1,7 +1,27 @@
-SPOTIFY_CONNECT=Spotify Connect
-START_TEST_STREAM=Start test stream
-STOP=Stop
-STATUS=Status
-RESTART_SERVICE=Restart service
-STATUS_RUNNING=Running
-STATUS_STOPPED=Stopped
+SPOTIFY_CONNECT
+	EN	Spotify Connect
+	NL	Spotify Connect
+
+START_TEST_STREAM
+	EN	Start test stream
+	NL	Start test stream
+
+STOP
+	EN	Stop
+	NL	Stop
+
+STATUS
+	EN	Status
+	NL	Status
+
+RESTART_SERVICE
+	EN	Restart service
+	NL	Restart service
+
+STATUS_RUNNING
+	EN	Running
+	NL	Actief
+
+STATUS_STOPPED
+	EN	Stopped
+	NL	Gestopt

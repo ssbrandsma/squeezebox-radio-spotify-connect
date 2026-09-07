@@ -28,8 +28,16 @@ fn main() -> std::io::Result<()> {
     let out = child.stdout.take().unwrap();
     let err = child.stderr.take().unwrap();
     let status_out = status.clone();
+    let status_stdout = status.clone();
     let t1 = std::thread::spawn(move || {
-        for line in BufReader::new(out).lines().flatten() { println!("{}", line); }
+        for line in BufReader::new(out).lines().flatten() {
+            println!("{}", line);
+            if let Some(pos) = line.find("Browse to: ") {
+                write_status(&status_stdout, "pairing", Some(("url", line[pos + 11..].trim())));
+            } else if line.contains("Authenticated as") {
+                write_status(&status_stdout, "connected", None);
+            }
+        }
     });
     let t2 = std::thread::spawn(move || {
         for line in BufReader::new(err).lines().flatten() {
@@ -39,8 +47,6 @@ fn main() -> std::io::Result<()> {
                 write_status(&status_out, "pairing", Some(("url", url)));
             } else if line.contains("Authenticated as") {
                 write_status(&status_out, "connected", None);
-            } else if line.contains("ERROR") || line.contains("error") {
-                write_status(&status_out, "error", Some(("message", line.trim())));
             }
         }
     });

@@ -6,14 +6,20 @@ local Window = require("jive.ui.Window")
 local SpotifyService = require("applets.SpotifyConnect.SpotifyService")
 local SpotifyPlayback = require("applets.SpotifyConnect.SpotifyPlayback")
 local Timer = require("jive.ui.Timer")
+local state = require("applets.SpotifyConnect.SpotifyConnectState")
 
 module(..., Framework.constants)
 oo.class(_M, Applet)
 
 function init(self)
-    self.service = SpotifyService(self)
-    self.playback = SpotifyPlayback(self)
-    local settings = self:getSettings()
+    self._settings = self._settings or { enabled = false, deviceName = "Squeezebox Radio" }
+    state.applet = self
+    self.service = SpotifyService()
+    self.service:init(self)
+    self.playback = SpotifyPlayback()
+    self.playback:init(self)
+    state.service = self.service
+    local settings = self._settings
     if settings.enabled and self.service:credentialsExist() then
         Timer(2500, function()
             self.service:start(false)

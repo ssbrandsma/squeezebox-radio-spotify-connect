@@ -1,0 +1,2 @@
+local state = {}
+return state

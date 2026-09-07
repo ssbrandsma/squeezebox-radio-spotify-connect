@@ -1,5 +1,8 @@
 local oo = require("loop.simple")
 local Player = require("jive.slim.Player")
+local decode = require("squeezeplay.decode")
+local Stream = require("squeezeplay.stream")
+local string = require("string")
 
 module(...)
 oo.class(_M)
@@ -32,8 +35,7 @@ function start(self, host, port, path)
     self.playback.sentAudioUnderrunEvent = false
     self.playback.isLooping = false
     self.playback.ignoreStream = false
-    local decode = require("squeezeplay.decode")
-    require("squeezeplay.stream"):icyMetaInterval(0)
+    Stream:icyMetaInterval(0)
     decode:start(string.byte('o'), 0, 0, 0, 0, 0, 0, 0, 0, 0)
     self.playback:_streamConnect(host, port)
     return true

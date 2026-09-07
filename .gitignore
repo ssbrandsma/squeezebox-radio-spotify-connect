@@ -1,0 +1,6 @@
+dist/*.zip
+build/out/
+build/*.log
+__pycache__/
+*.pyc
+.venv/

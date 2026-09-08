@@ -1,5 +1,6 @@
 dist/*.zip
 build/out/
+build/zipcheck*/
 build/*.log
 __pycache__/
 *.pyc

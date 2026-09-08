@@ -1,2 +1,2 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<extensions><extension name="SpotifyConnect" version="0.3.0" target="baby"><file>SpotifyConnect/</file></extension></extensions>
+<extensions><extension name="SpotifyConnect" version="0.3.1" target="baby"><file>SpotifyConnect/</file></extension></extensions>

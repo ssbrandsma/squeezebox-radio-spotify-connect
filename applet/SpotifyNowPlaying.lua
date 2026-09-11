@@ -31,7 +31,8 @@ end
 function NowPlaying:_window()
     if self.window then return end
     local w = Window("linein", "Spotify Connect")
-    self.title = Label("text", "Spotify Connect"); self.info = Label("nptrack", "Waiting for Spotify..."); self.icon = Icon("icon_linein")
+    -- Use the normal compact text style; nptrack is oversized and left-biased.
+    self.title = Label("text", "Spotify Connect"); self.info = Label("text", "Waiting for Spotify..."); self.icon = Icon("icon_linein")
     local fallback = loadImage(FALLBACK_ART)
     if fallback then self.surface = fallback; self.icon:setValue(fallback) end
     w:addWidget(Group("title", { lbutton = w:createDefaultLeftButton(), text = self.title, rbutton = nil }))
@@ -58,14 +59,15 @@ end
 function NowPlaying:update()
     local d = self.applet.service:statusData(); local state = d.playback_state or "not_playing"
     local title, artist, album = d.title or "", d.artist or "", d.album or ""
+    local displayTitle = title ~= "" and title or "Spotify Connect"
+    local stateText = state == "playing" and "Playing" or state == "paused" and "Paused" or "Not playing"
+    setInfo(self.title, displayTitle)
+    setInfo(self.info, artist .. "\n" .. album .. "\n" .. stateText)
     local key = d.track_id or (artist .. "\0" .. title)
     if key ~= self.key then
         self.key = key; self.artwork:cancel()
         self:_showFallback()
-        setInfo(self.info, (title ~= "" and title or "Nothing playing") .. "\n" .. artist .. "\n" .. album .. "\n" .. (state == "playing" and "Playing" or state == "paused" and "Paused" or "Not playing"))
         if title ~= "" and artist ~= "" then self.artwork:lookup(title, artist, d.artwork_url, key) end
-    else
-        setInfo(self.info, (title ~= "" and title or "Nothing playing") .. "\n" .. artist .. "\n" .. album .. "\n" .. (state == "playing" and "Playing" or state == "paused" and "Paused" or "Not playing"))
     end
 end
 function NowPlaying:show()

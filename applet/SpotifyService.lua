@@ -87,7 +87,7 @@ function start(self, pairing)
 end
 function stop(self)
     local cmd = "if test -s " .. q(PID) .. "; then kill -TERM `cat " .. q(PID) .. "` 2>/dev/null; fi; if test -s " .. q(BPID) .. "; then kill -TERM `cat " .. q(BPID) .. "` 2>/dev/null; fi; for p in `ps | grep '/usr/share/jive/applets/SpotifyConnect/librespot' | grep -v grep | awk '{print $1}'`; do kill -TERM $p 2>/dev/null; done; for p in `ps | grep '/usr/share/jive/applets/SpotifyConnect/ogg-http-bridge' | grep -v grep | awk '{print $1}'`; do kill -TERM $p 2>/dev/null; done; sleep 1; rm -f " .. q(PID) .. " " .. q(BPID) .. " " .. q(FIFO)
-    os.execute(cmd)
+    os.execute(cmd .. "; rm -f " .. q(STATUS) .. " " .. q(METADATA) .. " " .. q(METADATA_STATE) .. " " .. q(METADATA_VOLUME))
 end
 function restart(self) self:stop(); Timer(400, function() self:start(false) end, true):start(); return true end
 function disconnect(self) self:stop(); os.execute("rm -f " .. q(USER .. "/credentials.json") .. " " .. q(USER .. "/volume")) end

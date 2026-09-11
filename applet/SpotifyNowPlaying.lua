@@ -60,6 +60,7 @@ end
 function NowPlaying:update()
     local d = self.applet.service:statusData(); local state = d.playback_state or "not_playing"
     local title, artist, album = d.title or "", d.artist or "", d.album or ""
+    if title ~= "" and state ~= "paused" and state ~= "stopped" then state = "playing" end
     local displayTitle = title ~= "" and title or "Spotify Connect"
     local stateText = state == "playing" and "Playing" or state == "paused" and "Paused" or "Not playing"
     setInfo(self.title, displayTitle)

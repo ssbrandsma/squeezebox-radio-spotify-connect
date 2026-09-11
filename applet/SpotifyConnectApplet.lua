@@ -38,7 +38,7 @@ function init(self)
         if d.volume and d.volume ~= self._lastRemoteVolume then
             local player = Player:getLocalPlayer() or Player:getCurrentPlayer()
             if player and player.volumeLocal then
-                local percent = math.floor((d.volume * 100 / 65535) + 0.5)
+                local percent = d.volume <= 100 and d.volume or math.floor((d.volume * 100 / 65535) + 0.5)
                 percent = math.max(0, math.min(100, percent))
                 player:volumeLocal(percent)
                 if player.playback and player.playback.setVolume then

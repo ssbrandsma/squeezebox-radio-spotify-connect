@@ -39,9 +39,9 @@ function init(self)
         self._lastTrackId = d.track_id or self._lastTrackId
         if d.volume and d.volume ~= self._lastRemoteVolume then
             local player = Player:getLocalPlayer() or Player:getCurrentPlayer()
-            if player and player.volume then
+            if player and player.volumeLocal then
                 local percent = math.floor((d.volume * 100 / 65535) + 0.5)
-                player:volume(math.max(0, math.min(100, percent)), true)
+                player:volumeLocal(math.max(0, math.min(100, percent)))
             end
             self._lastRemoteVolume = d.volume
         end

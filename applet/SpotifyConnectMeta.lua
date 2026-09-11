@@ -75,7 +75,15 @@ function registerApplet(self)
         menu:addItem({ text = "Device name: " .. ((applet._settings and applet._settings.deviceName) or "Squeezebox Radio") })
         if service:isRunning() then
             menu:addItem({ text = "Restart service", callback = function() service:restart() end })
-            menu:addItem({ text = "Disconnect account", callback = function() service:disconnect(); local settings = applet._settings; settings.enabled = false; self:storeSettings() end })
+            local disconnectItem
+            disconnectItem = { text = "Disconnect account", callback = function()
+                service:disconnect()
+                local settings = applet._settings; settings.enabled = false; self:storeSettings()
+                menu:setText(disconnectItem, "Disconnected")
+                menu:setText(statusItem, "Status: not_connected")
+                Timer(2500, function() menu:setText(disconnectItem, "Disconnect account") end, true):start()
+            end }
+            menu:addItem(disconnectItem)
         end
         window:show()
     end, 1))

@@ -31,8 +31,9 @@ end
 function NowPlaying:_window()
     if self.window then return end
     local w = Window("linein", "Spotify Connect")
-    -- Use the normal compact text style; nptrack is oversized and left-biased.
-    self.title = Label("text", "Spotify Connect"); self.info = Label("text", "Waiting for Spotify..."); self.icon = Icon("icon_linein")
+    -- Keep the stock nptrack widget geometry for the artwork layout. The
+    -- song title itself is shown in the compact text-style title bar above it.
+    self.title = Label("text", "Spotify Connect"); self.info = Label("nptrack", "Waiting for Spotify..."); self.icon = Icon("icon_linein")
     local fallback = loadImage(FALLBACK_ART)
     if fallback then self.surface = fallback; self.icon:setValue(fallback) end
     w:addWidget(Group("title", { lbutton = w:createDefaultLeftButton(), text = self.title, rbutton = nil }))

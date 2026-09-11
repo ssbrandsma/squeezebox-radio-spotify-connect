@@ -161,7 +161,16 @@ fn main() -> io::Result<()> {
             match rx.recv_timeout(Duration::from_millis(100)) {
                 Ok(Ok(Some(p))) => {
                     let is_header = p[5] & 2 != 0 || headers.packets < 3;
-                    if p[5] & 2 != 0 { timeline = None; }
+                    if p[5] & 2 != 0 {
+                        timeline = None;
+                        // A new Ogg logical stream cannot be decoded on the
+                        // previous HTTP connection. Drop it before caching
+                        // the new headers so the client reconnects cleanly.
+                        if client.take().is_some() {
+                            eprintln!("[BRIDGE] new stream; closed previous client");
+                        }
+                        pending = None;
+                    }
                     headers.observe(&p)?;
                     if client.is_some() || !is_header {
                         pending = Some(p);

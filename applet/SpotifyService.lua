@@ -2,6 +2,9 @@ local oo = require("loop.simple")
 local Timer = require("jive.ui.Timer")
 local os = require("os")
 local io = require("io")
+local pcall = pcall
+local okJson, json = pcall(require, "json")
+if not okJson then json = nil end
 
 module(...)
 oo.class(_M)
@@ -12,6 +15,8 @@ local FIFO = USER .. "/audio.fifo"
 local PID = USER .. "/librespot.pid"
 local BPID = USER .. "/bridge.pid"
 local STATUS = USER .. "/status.json"
+local METADATA = USER .. "/metadata.json"
+local METADATA_STATE = METADATA .. ".state"
 local LOG = USER .. "/engine.log"
 local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
 
@@ -29,7 +34,20 @@ function statusData(self)
     if not self:isRunning() then return { state = "not_connected" } end
     local f = io.open(STATUS, "r"); if not f then return { state = "not_connected" } end
     local s = f:read("*a"); f:close()
-    return { state = s:match('"state":"([^"]+)"') or "starting", url = s:match('"url":"([^"]+)"'), message = s:match('"message":"([^"]+)"') }
+    local d = { state = s:match('"state":"([^"]+)"') or "starting", url = s:match('"url":"([^"]+)"'), message = s:match('"message":"([^"]+)"') }
+    local m = io.open(METADATA, "r")
+    if m then
+        local ms = m:read("*a"); m:close()
+        local ok, parsed = json and pcall(function() return json.decode(ms) end)
+        if ok and type(parsed) == "table" then
+            d.playback_state, d.track_id = parsed.playback_state, parsed.track_id
+            d.title, d.artist, d.album = parsed.title, parsed.artist, parsed.album
+            d.duration_ms, d.artwork_url = parsed.duration_ms, parsed.artwork_url
+        end
+    end
+    local st = io.open(METADATA_STATE, "r")
+    if st then d.playback_state = st:read("*a"):gsub("%s", ""); st:close() end
+    return d
 end
 local function defaultName()
     local f = io.open("/sys/class/net/wlan0/address", "r")
@@ -40,7 +58,7 @@ local function defaultName()
 end
 function start(self, pairing)
     if self:isRunning() then return true end
-    os.execute("mkdir -p " .. q(USER) .. "; chmod 700 " .. q(USER) .. "; rm -f " .. q(STATUS))
+    os.execute("mkdir -p " .. q(USER) .. "; chmod 700 " .. q(USER) .. "; rm -f " .. q(STATUS) .. " " .. q(METADATA) .. " " .. q(METADATA_STATE))
     os.execute("test -p " .. q(FIFO) .. " || mkfifo " .. q(FIFO) .. "; chmod 600 " .. q(FIFO))
     os.execute("( exec 3<>" .. q(FIFO) .. "; exec " .. q(ROOT .. "/ogg-http-bridge") .. " 17880 --unpaced <" .. q(FIFO) .. " >>" .. q(LOG) .. " 2>&1 ) & echo $! >" .. q(BPID))
     local auth = ""; if pairing or not self:credentialsExist() then auth = " --enable-device-auth" end
@@ -48,7 +66,7 @@ function start(self, pairing)
     local name = settings.deviceName or "Squeezebox Radio"
     if name == "Squeezebox Radio" then name = defaultName() end
     local cmd = "( exec " .. q(ROOT .. "/spotify-supervisor") .. " --status " .. q(STATUS) .. " -- " .. q(ROOT .. "/librespot") ..
-        " --name " .. q(name) .. " --backend pipe --device " .. q(FIFO) .. " --passthrough --disable-audio-cache --disable-discovery --system-cache " .. q(USER) .. " --bitrate 96" .. auth .. " >>" .. q(LOG) .. " 2>&1 ) & echo $! >" .. q(PID)
+        " --name " .. q(name) .. " --onevent " .. q(ROOT .. "/spotify-metadata") .. " " .. q(METADATA) .. " --backend pipe --device " .. q(FIFO) .. " --passthrough --disable-audio-cache --disable-discovery --system-cache " .. q(USER) .. " --bitrate 96" .. auth .. " >>" .. q(LOG) .. " 2>&1 ) & echo $! >" .. q(PID)
     os.execute(cmd); return true
 end
 function stop(self)

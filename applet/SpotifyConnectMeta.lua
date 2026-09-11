@@ -65,6 +65,7 @@ function registerApplet(self)
         local window = Window("text_list", "Spotify Connect")
         local menu = SimpleMenu("menu"); window:addWidget(menu)
         local state = service:status()
+        menu:addItem({ text = "Now Playing", callback = function() applet.nowPlaying:show() end })
         if state == "not_connected" or state == "error" then
             menu:addItem({ text = "Connect", callback = function() service:start(true); showPairing(self, applet) end })
         end

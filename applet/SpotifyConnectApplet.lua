@@ -5,6 +5,7 @@ local SimpleMenu = require("jive.ui.SimpleMenu")
 local Window = require("jive.ui.Window")
 local SpotifyService = require("applets.SpotifyConnect.SpotifyService")
 local SpotifyPlayback = require("applets.SpotifyConnect.SpotifyPlayback")
+local SpotifyNowPlaying = require("applets.SpotifyConnect.SpotifyNowPlaying")
 local Timer = require("jive.ui.Timer")
 local state = require("applets.SpotifyConnect.SpotifyConnectState")
 
@@ -18,6 +19,7 @@ function init(self)
     self.service:init(self)
     self.playback = SpotifyPlayback()
     self.playback:init(self)
+    self.nowPlaying = SpotifyNowPlaying.new(self, require("jive.utils.log").logger("SpotifyConnect"))
     state.service = self.service
     local settings = self._settings
     if settings.enabled and self.service:credentialsExist() then

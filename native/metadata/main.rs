@@ -7,6 +7,11 @@ fn esc(value: &str) -> String {
 fn main() -> std::io::Result<()> {
     let path = env::args().nth(1).ok_or_else(|| std::io::Error::other("metadata path required"))?;
     let event = env::var("PLAYER_EVENT").unwrap_or_default();
+    if event == "volume_changed" {
+        let volume_path = format!("{}.volume", path);
+        fs::write(volume_path, env::var("VOLUME").unwrap_or_default().as_bytes())?;
+        return Ok(());
+    }
     let state = match event.as_str() {
         "paused" => "paused",
         "stopped" | "end_of_track" | "unavailable" => "stopped",

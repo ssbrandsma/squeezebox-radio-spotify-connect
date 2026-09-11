@@ -6,7 +6,9 @@ local Window = require("jive.ui.Window")
 local SpotifyService = require("applets.SpotifyConnect.SpotifyService")
 local SpotifyPlayback = require("applets.SpotifyConnect.SpotifyPlayback")
 local SpotifyNowPlaying = require("applets.SpotifyConnect.SpotifyNowPlaying")
+local Player = require("jive.slim.Player")
 local Timer = require("jive.ui.Timer")
+local math = require("math")
 local Log = require("jive.utils.log")
 local state = require("applets.SpotifyConnect.SpotifyConnectState")
 
@@ -22,12 +24,21 @@ function init(self)
     self.playback:init(self)
     self.nowPlaying = SpotifyNowPlaying.new(self, Log.logger("SpotifyConnect"))
     self._lastTrackId = nil
+    self._lastRemoteVolume = nil
     self._trackWatcher = Timer(500, function()
         local d = self.service:statusData()
         if d.track_id and self._lastTrackId and d.track_id ~= self._lastTrackId and self.service:isRunning() then
             self.playback:start("127.0.0.1", 17880, "/spotify.ogg")
         end
         self._lastTrackId = d.track_id or self._lastTrackId
+        if d.volume and d.volume ~= self._lastRemoteVolume then
+            local player = Player:getLocalPlayer() or Player:getCurrentPlayer()
+            if player and player.volume then
+                local percent = math.floor((d.volume * 100 / 65535) + 0.5)
+                player:volume(math.max(0, math.min(100, percent)), true)
+            end
+            self._lastRemoteVolume = d.volume
+        end
     end)
     self._trackWatcher:start()
     state.service = self.service

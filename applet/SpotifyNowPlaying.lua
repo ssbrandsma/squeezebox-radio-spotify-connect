@@ -33,7 +33,7 @@ function NowPlaying:_window()
     local w = Window("linein", "Spotify Connect")
     -- Keep the stock nptrack widget geometry for the artwork layout. The
     -- song title itself is shown in the compact text-style title bar above it.
-    self.title = Label("text", "Spotify Connect"); self.info = Label("nptrack", "Waiting for Spotify..."); self.icon = Icon("icon_linein")
+    self.title = Label("text", "Spotify Connect"); self.info = Label("nptrack", "Waiting for Spotify..."); self.icon = Icon("icon")
     local fallback = loadImage(FALLBACK_ART)
     if fallback then self.surface = fallback; self.icon:setValue(fallback) end
     w:addWidget(Group("title", { lbutton = w:createDefaultLeftButton(), text = self.title, rbutton = nil }))
@@ -60,7 +60,7 @@ end
 function NowPlaying:update()
     local d = self.applet.service:statusData(); local state = d.playback_state or "not_playing"
     local title, artist, album = d.title or "", d.artist or "", d.album or ""
-    if title ~= "" and state ~= "paused" and state ~= "stopped" then state = "playing" end
+    if title ~= "" and state ~= "paused" then state = "playing" end
     local displayTitle = title ~= "" and title or "Spotify Connect"
     local stateText = state == "playing" and "Playing" or state == "paused" and "Paused" or "Not playing"
     setInfo(self.title, displayTitle)

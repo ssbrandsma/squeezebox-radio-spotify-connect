@@ -4,6 +4,7 @@ local os = require("os")
 local io = require("io")
 local pcall = pcall
 local type = type
+local tonumber = tonumber
 local okJson, json = pcall(require, "json")
 if not okJson then json = nil end
 
@@ -43,7 +44,7 @@ function statusData(self)
     local m = io.open(METADATA, "r")
     if m then
         local ms = m:read("*a"); m:close()
-        local ok, parsed = json and pcall(function() return json.decode(ms) end)
+        local ok, parsed = pcall(function() return json.decode(ms) end)
         if ok and type(parsed) == "table" then
             d.playback_state, d.track_id = parsed.playback_state, parsed.track_id
             d.title, d.artist, d.album = parsed.title, parsed.artist, parsed.album

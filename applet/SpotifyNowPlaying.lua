@@ -53,14 +53,12 @@ end
 function NowPlaying:_showFallback()
     local surface = loadImage(FALLBACK_ART)
     if surface then
-        if self.surface then self.surface:release() end
         self.surface = surface; self.icon:setValue(surface); self.icon:reLayout(); self.icon:reDraw()
     end
 end
 function NowPlaying:update()
     local d = self.applet.service:statusData(); local state = d.playback_state or "not_playing"
     local title, artist, album = d.title or "", d.artist or "", d.album or ""
-    if title ~= "" and state ~= "paused" then state = "playing" end
     local displayTitle = title ~= "" and title or "Spotify Connect"
     local stateText = state == "playing" and "Playing" or state == "paused" and "Paused" or "Not playing"
     setInfo(self.title, displayTitle)

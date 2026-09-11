@@ -1,7 +1,7 @@
 local os, pcall, tostring, type, setmetatable = os, pcall, tostring, type, setmetatable
 local io = require("io")
 local string = require("string")
-local Process = require("jive.net.Process")
+local Timer = require("jive.ui.Timer")
 local RequestHttp = require("jive.net.RequestHttp")
 local Resolver = require("applets.StandaloneRadio.Resolver")
 local SocketHttp = require("jive.net.SocketHttp")
@@ -43,11 +43,22 @@ function Artwork:lookup(title, artist, direct, key)
 end
 function Artwork:_download(url, key, generation)
     local path = "/tmp/spotify-connect-artwork-" .. tostring(generation) .. ".img"; self.temp = path
-    local command = "wget -q -T 20 -O - " .. quote(url) .. " 2>/dev/null | dd of=" .. quote(path) .. " bs=1024 count=513 2>/dev/null"
-    Process(jnt, command):read(function(chunk, err)
-        if chunk then return end
+    local done = path .. ".done"
+    os.remove(done)
+    -- Process:read uses a blocking stdio read on this firmware. The pipe
+    -- produces no stdout while dd writes its file, stalling all UI timers.
+    -- Launch independently and poll a completion marker without pipe reads.
+    os.execute("( wget -q -T 8 -O - " .. quote(url) ..
+        " | dd of=" .. quote(path) .. " bs=1024 count=513; touch " .. quote(done) ..
+        " ) </dev/null >/dev/null 2>&1 &")
+    local timer
+    timer = Timer(200, function()
+        local f = io.open(done, "r")
+        if not f then return end
+        f:close(); timer:stop(); os.remove(done)
         if generation ~= self.generation or key ~= self.key then os.remove(path); return end
-        if not err and self.callback then self.callback(path, key) end
+        if self.callback then self.callback(path, key) end
     end)
+    timer:start()
 end
 return _M

@@ -30,7 +30,7 @@ function init(self)
         if d.track_id and self._lastTrackId and d.track_id ~= self._lastTrackId then
             Log.logger("SpotifyConnect"):info("track changed; reconnecting local playback")
             self.playback:stop()
-            Timer(250, function()
+            Timer(50, function()
                 self.playback:start("127.0.0.1", 17880, "/spotify.ogg")
             end, true):start()
         end
@@ -39,7 +39,11 @@ function init(self)
             local player = Player:getLocalPlayer() or Player:getCurrentPlayer()
             if player and player.volumeLocal then
                 local percent = math.floor((d.volume * 100 / 65535) + 0.5)
-                player:volumeLocal(math.max(0, math.min(100, percent)))
+                percent = math.max(0, math.min(100, percent))
+                player:volumeLocal(percent)
+                if player.playback and player.playback.setVolume then
+                    player.playback:setVolume(percent)
+                end
             end
             self._lastRemoteVolume = d.volume
         end

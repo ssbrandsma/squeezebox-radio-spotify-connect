@@ -3,6 +3,7 @@ local Timer = require("jive.ui.Timer")
 local os = require("os")
 local io = require("io")
 local pcall = pcall
+local type = type
 local okJson, json = pcall(require, "json")
 if not okJson then json = nil end
 

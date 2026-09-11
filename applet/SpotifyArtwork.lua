@@ -1,4 +1,4 @@
-local os, pcall, tostring = os, pcall, tostring
+local os, pcall, tostring, type = os, pcall, tostring, type
 local io = require("io")
 local string = require("string")
 local Process = require("jive.net.Process")

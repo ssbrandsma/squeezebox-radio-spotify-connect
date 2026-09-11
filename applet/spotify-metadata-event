@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /usr/share/jive/applets/SpotifyConnect/spotify-metadata /etc/squeezeplay/userpath/SpotifyConnect/metadata.json

@@ -32,10 +32,13 @@ function status(self)
     local s = f:read("*a"); f:close(); return s:match('"state":"([^"]+)"') or "starting"
 end
 function statusData(self)
-    if not self:isRunning() then return { state = "not_connected" } end
-    local f = io.open(STATUS, "r"); if not f then return { state = "not_connected" } end
-    local s = f:read("*a"); f:close()
-    local d = { state = s:match('"state":"([^"]+)"') or "starting", url = s:match('"url":"([^"]+)"'), message = s:match('"message":"([^"]+)"') }
+    local d = { state = self:isRunning() and "starting" or "not_connected" }
+    local f = io.open(STATUS, "r")
+    if f then
+        local s = f:read("*a"); f:close()
+        d.state = s:match('"state":"([^"]+)"') or d.state
+        d.url, d.message = s:match('"url":"([^"]+)"'), s:match('"message":"([^"]+)"')
+    end
     local m = io.open(METADATA, "r")
     if m then
         local ms = m:read("*a"); m:close()
@@ -44,6 +47,15 @@ function statusData(self)
             d.playback_state, d.track_id = parsed.playback_state, parsed.track_id
             d.title, d.artist, d.album = parsed.title, parsed.artist, parsed.album
             d.duration_ms, d.artwork_url = parsed.duration_ms, parsed.artwork_url
+        else
+            -- Keep the display useful on firmware without the JSON module.
+            d.playback_state = ms:match('"playback_state":"([^"]*)"')
+            d.track_id = ms:match('"track_id":"([^"]*)"')
+            d.title = ms:match('"title":"([^"]*)"')
+            d.artist = ms:match('"artist":"([^"]*)"')
+            d.album = ms:match('"album":"([^"]*)"')
+            d.duration_ms = ms:match('"duration_ms":"([^"]*)"')
+            d.artwork_url = ms:match('"artwork_url":"([^"]*)"')
         end
     end
     local st = io.open(METADATA_STATE, "r")
@@ -67,7 +79,7 @@ function start(self, pairing)
     local name = settings.deviceName or "Squeezebox Radio"
     if name == "Squeezebox Radio" then name = defaultName() end
     local cmd = "( exec " .. q(ROOT .. "/spotify-supervisor") .. " --status " .. q(STATUS) .. " -- " .. q(ROOT .. "/librespot") ..
-        " --name " .. q(name) .. " --onevent " .. q(ROOT .. "/spotify-metadata") .. " " .. q(METADATA) .. " --backend pipe --device " .. q(FIFO) .. " --passthrough --disable-audio-cache --disable-discovery --system-cache " .. q(USER) .. " --bitrate 96" .. auth .. " >>" .. q(LOG) .. " 2>&1 ) & echo $! >" .. q(PID)
+        " --name " .. q(name) .. " --onevent " .. q(ROOT .. "/spotify-metadata-event") .. " --backend pipe --device " .. q(FIFO) .. " --passthrough --disable-audio-cache --disable-discovery --system-cache " .. q(USER) .. " --bitrate 96" .. auth .. " >>" .. q(LOG) .. " 2>&1 ) & echo $! >" .. q(PID)
     os.execute(cmd); return true
 end
 function stop(self)

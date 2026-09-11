@@ -1,4 +1,4 @@
-local os, pcall, tostring = os, pcall, tostring
+local os, pcall, tostring, setmetatable = os, pcall, tostring, setmetatable
 local io = require("io")
 local math = require("math")
 local Framework = require("jive.ui.Framework")
@@ -10,12 +10,18 @@ local Window = require("jive.ui.Window")
 local Timer = require("jive.ui.Timer")
 local Artwork = require("applets.SpotifyConnect.SpotifyArtwork")
 local EVENT_WINDOW_POP = jive.ui.EVENT_WINDOW_POP
+local FALLBACK_ART = "/usr/share/jive/applets/SpotifyConnect/spotify-logo.jpg"
 module(...)
 local NowPlaying = {}; NowPlaying.__index = NowPlaying
 local function loadImage(path)
     local f = io.open(path, "rb"); if not f then return nil end
     local data = f:read("*a"); f:close(); if not data or data == "" then return nil end
     return Surface:loadImageData(data, #data)
+end
+local function setInfo(label, text)
+    label:setValue(text)
+    if label.reLayout then label:reLayout() end
+    if label.reDraw then label:reDraw() end
 end
 function new(applet, log)
     local self = setmetatable({ applet = applet, log = log, key = nil, surface = nil, timer = nil }, NowPlaying)
@@ -26,6 +32,8 @@ function NowPlaying:_window()
     if self.window then return end
     local w = Window("linein", "Spotify Connect")
     self.title = Label("text", "Spotify Connect"); self.info = Label("nptrack", "Waiting for Spotify..."); self.icon = Icon("icon_linein")
+    local fallback = loadImage(FALLBACK_ART)
+    if fallback then self.surface = fallback; self.icon:setValue(fallback) end
     w:addWidget(Group("title", { lbutton = w:createDefaultLeftButton(), text = self.title, rbutton = nil }))
     w:addWidget(Group("nptitle", { nptrack = self.info, xofy = nil }))
     w:addWidget(Group("npartwork", { artwork = self.icon }))
@@ -40,16 +48,24 @@ function NowPlaying:_setArtwork(path, key)
     if scale < 1 then local scaled = surface:zoom(scale, scale, 1); surface:release(); surface = scaled end
     if surface then self.surface = surface; self.icon:setValue(surface); self.icon:reLayout(); self.icon:reDraw() end
 end
+function NowPlaying:_showFallback()
+    local surface = loadImage(FALLBACK_ART)
+    if surface then
+        if self.surface then self.surface:release() end
+        self.surface = surface; self.icon:setValue(surface); self.icon:reLayout(); self.icon:reDraw()
+    end
+end
 function NowPlaying:update()
     local d = self.applet.service:statusData(); local state = d.playback_state or "not_playing"
     local title, artist, album = d.title or "", d.artist or "", d.album or ""
     local key = d.track_id or (artist .. "\0" .. title)
     if key ~= self.key then
         self.key = key; self.artwork:cancel()
-        self.info:setValue((title ~= "" and title or "Nothing playing") .. "\n" .. artist .. "\n" .. album .. "\n" .. (state == "playing" and "Playing" or state == "paused" and "Paused" or "Not playing"))
+        self:_showFallback()
+        setInfo(self.info, (title ~= "" and title or "Nothing playing") .. "\n" .. artist .. "\n" .. album .. "\n" .. (state == "playing" and "Playing" or state == "paused" and "Paused" or "Not playing"))
         if title ~= "" and artist ~= "" then self.artwork:lookup(title, artist, d.artwork_url, key) end
     else
-        self.info:setValue((title ~= "" and title or "Nothing playing") .. "\n" .. artist .. "\n" .. album .. "\n" .. (state == "playing" and "Playing" or state == "paused" and "Paused" or "Not playing"))
+        setInfo(self.info, (title ~= "" and title or "Nothing playing") .. "\n" .. artist .. "\n" .. album .. "\n" .. (state == "playing" and "Playing" or state == "paused" and "Paused" or "Not playing"))
     end
 end
 function NowPlaying:show()

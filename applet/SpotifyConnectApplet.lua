@@ -27,13 +27,11 @@ function init(self)
     self._lastRemoteVolume = nil
     self._trackWatcher = Timer(500, function()
         local d = self.service:statusData()
-        if d.track_id and self._lastTrackId and d.track_id ~= self._lastTrackId and self.service:isRunning() then
+        if d.track_id and self._lastTrackId and d.track_id ~= self._lastTrackId then
             Log.logger("SpotifyConnect"):info("track changed; reconnecting local playback")
             self.playback:stop()
             Timer(250, function()
-                if self.service:isRunning() then
-                    self.playback:start("127.0.0.1", 17880, "/spotify.ogg")
-                end
+                self.playback:start("127.0.0.1", 17880, "/spotify.ogg")
             end, true):start()
         end
         self._lastTrackId = d.track_id or self._lastTrackId

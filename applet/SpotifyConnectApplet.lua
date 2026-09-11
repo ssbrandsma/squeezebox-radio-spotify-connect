@@ -36,13 +36,10 @@ function init(self)
         end
         self._lastTrackId = d.track_id or self._lastTrackId
         if d.volume and d.volume ~= self._lastRemoteVolume then
-            local player = Player:getLocalPlayer() or Player:getCurrentPlayer()
-            if player and player.volumeLocal then
-                local percent = math.floor((d.volume * 100 / 65535) + 0.5)
-                percent = math.max(0, math.min(100, percent))
-                player:volumeLocal(percent)
-                Log.logger("SpotifyConnect"):info("remote volume applied: ", percent)
-            end
+            local percent = math.floor((d.volume * 100 / 65535) + 0.5)
+            percent = math.max(0, math.min(100, percent))
+            local applied = self.playback:setRemoteVolume(percent)
+            Log.logger("SpotifyConnect"):info("remote volume: ", percent, " applied=", applied)
             self._lastRemoteVolume = d.volume
         end
     end)

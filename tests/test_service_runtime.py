@@ -61,6 +61,7 @@ def test_watcher_switches_tracks_and_applies_u16_volume():
         end
         package.loaded['applets.SpotifyConnect.SpotifyPlayback'] = function()
             return {init=function() end, stop=function() stops=stops+1 end,
+                    setRemoteVolume=function(_, v) table.insert(volumes, v) end,
                     start=function() starts=starts+1 end}
         end
         package.loaded['applets.SpotifyConnect.SpotifyNowPlaying'] = {new=function() return {} end}
@@ -85,3 +86,32 @@ def test_watcher_switches_tracks_and_applies_u16_volume():
     lua.globals().data.volume = 100
     watcher.callback()
     assert lua.globals().volumes[3] == 0  # u16 value, never interpreted as 100%
+
+
+def test_local_volume_uses_firmware_curve_and_explicit_mute():
+    lua = LuaRuntime(unpack_returned_tuples=True)
+    lua.execute('''
+        package.loaded['loop.simple'] = {class=function() end}
+        package.loaded['squeezeplay.stream'] = {}
+        package.loaded['squeezeplay.decode'] = {audioGain=function(_, l, r)
+            gainL, gainR = l, r
+        end}
+        pb = {_getGainFromVolume=function(_, v) return v * 100 end}
+        player = {playback=pb, volumeLocal=function(_, v, seq, stateOnly)
+            stored, sequenceAdvanced, storedOnly = v, seq, stateOnly
+        end}
+        package.loaded['jive.slim.Player'] = {getLocalPlayer=function() return player end}
+    ''')
+    path = Path(__file__).parents[1] / 'applet/SpotifyPlayback.lua'
+    lua.execute(path.read_text(), 'playback_test')
+    playback = lua.globals().package.loaded['playback_test']
+    playback.init(playback, lua.table())
+    assert playback.setRemoteVolume(playback, 40) is False
+    playback.playback = lua.globals().pb
+    assert playback.setRemoteVolume(playback, 40) is True
+    assert lua.globals().gainL == 4000
+    assert lua.globals().sequenceAdvanced is True
+    assert lua.globals().storedOnly is True
+    assert playback.setRemoteVolume(playback, 0) is True
+    assert lua.globals().gainL == 0
+    assert lua.globals().gainR == 0

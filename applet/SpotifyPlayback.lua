@@ -3,6 +3,7 @@ local Player = require("jive.slim.Player")
 local decode = require("squeezeplay.decode")
 local Stream = require("squeezeplay.stream")
 local string = require("string")
+local math = require("math")
 
 module(...)
 oo.class(_M)
@@ -38,6 +39,21 @@ function start(self, host, port, path)
     Stream:icyMetaInterval(0)
     decode:start(string.byte('o'), 0, 0, 0, 0, 0, 0, 0, 0, 0)
     self.playback:_streamConnect(host, port)
+    if self.remoteVolume then self:setRemoteVolume(self.remoteVolume) end
+    return true
+end
+
+function setRemoteVolume(self, percent)
+    self.remoteVolume = math.max(0, math.min(100, math.floor(percent)))
+    if not self.playback then return false end
+    local player = Player:getLocalPlayer()
+    if not player or player.playback ~= self.playback then return false end
+    -- Keep server gain messages from overriding this local command. Store
+    -- the volume through the firmware API, then apply its curve explicitly
+    -- to the Spotify decoder (including a defined zero/mute gain).
+    player:volumeLocal(self.remoteVolume, true, true)
+    local gain = self.remoteVolume == 0 and 0 or self.playback:_getGainFromVolume(self.remoteVolume)
+    decode:audioGain(gain, gain)
     return true
 end
 

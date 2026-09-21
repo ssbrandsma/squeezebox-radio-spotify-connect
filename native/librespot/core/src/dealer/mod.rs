@@ -599,7 +599,11 @@ async fn connect(
                             trace!("Received pong");
                             pong_received.store(true, atomic::Ordering::Relaxed);
                         }
-                        _ => (), // tungstenite handles Close and Ping automatically
+                        WsMessage::Close(frame) => {
+                            warn!("Dealer websocket closed by peer: {frame:?}");
+                            break;
+                        }
+                        _ => (), // tungstenite handles Ping automatically
                     },
                     Some(Err(e)) => {
                         warn!("Websocket connection failed: {e}");

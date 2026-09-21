@@ -68,14 +68,20 @@ impl RequestHandler for DealerRequestHandler {
             return;
         }
 
+        // Spotify expects the dealer acknowledgement promptly. Processing a
+        // transfer can include a connect-state HTTP update which occasionally
+        // takes longer than the dealer's request deadline on the Radio. If we
+        // wait for that work, Spotify closes the websocket and subsequent
+        // pause/skip commands are stranded until the dealer reconnects.
+        //
+        // The command is safely queued at this point, so acknowledge receipt
+        // now and consume the eventual result only for diagnostics.
+        responder.send(Response { success: true });
         tokio::spawn(async move {
             let reply = rx.recv().await.unwrap_or(Reply::Failure);
-            debug!("replying to ws request: {reply:?}");
-            match reply {
-                Reply::Unanswered => responder.force_unanswered(),
-                Reply::Success | Reply::Failure => responder.send(Response {
-                    success: matches!(reply, Reply::Success),
-                }),
+            debug!("dealer request completed after early acknowledgement: {reply:?}");
+            if matches!(reply, Reply::Failure) {
+                warn!("dealer request failed after it was accepted");
             }
         });
     }

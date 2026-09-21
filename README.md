@@ -21,7 +21,7 @@ and [docs/packaging.md](docs/packaging.md).
 
 The Applet Installer repository is published over plain HTTP for compatibility
 with the stock Radio firmware:
-`http://49.12.198.91/sbspotify/extensions.xml`.
+`http://49.12.198.91/sbspotifyconnect/extensions.xml`.
 
 The Spotify Connect menu includes a manual **Now Playing** view. Librespot's
 existing player events provide the track title, artist, album, track ID,

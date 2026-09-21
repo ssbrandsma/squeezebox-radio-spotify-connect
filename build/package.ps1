@@ -17,7 +17,7 @@ if ($Version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$') {
 }
 
 if (-not $BaseUrl) {
-    $BaseUrl = 'http://49.12.198.91/sbspotify'
+    $BaseUrl = 'http://49.12.198.91/sbspotifyconnect'
 }
 try { $RepositoryUri = [Uri]$BaseUrl } catch { throw "BaseUrl is not a valid URL: $BaseUrl" }
 if (-not $RepositoryUri.IsAbsoluteUri -or $RepositoryUri.Scheme -notin @('http', 'https')) {

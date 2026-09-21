@@ -9,7 +9,7 @@
       <desc lang="EN">Standalone Spotify Connect playback for Logitech Squeezebox Radio. LMS is only needed to install the applet.</desc>
       <changes lang="EN">Responsive playback controls, remote volume, pairing QR code, and redesigned Now Playing screen.</changes>
       <creator>Sjoerd Brandsma</creator>
-      <url>http://49.12.198.91/sbspotify/SpotifyConnect-0.5.0.zip</url>
+      <url>http://49.12.198.91/sbspotifyconnect/SpotifyConnect-0.5.0.zip</url>
       <sha>3cfb7debb244514988dce1d2dc1b4c469a886409</sha>
     </applet>
   </applets>

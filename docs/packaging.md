@@ -8,8 +8,18 @@ The archive contains only the applet Lua, strings, artwork, event hook, and
 four ARM runtime executables. Credentials, research evidence, test binaries,
 PC artifacts, and source checkouts are excluded.
 
-By default, package URLs point to the matching tag under this project's GitHub
-Releases. Pass `-BaseUrl` when publishing the files through another web server.
+By default, package URLs point to `http://49.12.198.91/sbspotify`. Publish both
+`extensions.xml` and the versioned ZIP in `/var/www/sbspotify/` so the stock
+Radio can download them without TLS. Pass `-BaseUrl` when publishing through a
+different static web directory.
+
+Add `http://49.12.198.91/sbspotify/extensions.xml` to LMS under **Additional
+Repositories**. The two public files for version 0.5.0 are:
+
+```text
+http://49.12.198.91/sbspotify/extensions.xml
+http://49.12.198.91/sbspotify/SpotifyConnect-0.5.0.zip
+```
 
 Applet-owned executables install under
 `/usr/share/jive/applets/SpotifyConnect/`. The applet applies `chmod 755`

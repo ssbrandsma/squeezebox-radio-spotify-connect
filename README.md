@@ -19,6 +19,10 @@ are excluded because the research repository proved they are the wrong boundary.
 See [docs/architecture.md](docs/architecture.md), [docs/development.md](docs/development.md),
 and [docs/packaging.md](docs/packaging.md).
 
+The Applet Installer repository is published over plain HTTP for compatibility
+with the stock Radio firmware:
+`http://49.12.198.91/sbspotify/extensions.xml`.
+
 The Spotify Connect menu includes a manual **Now Playing** view. Librespot's
 existing player events provide the track title, artist, album, track ID,
 duration, playback state, and cover URL. Metadata is written by the small

@@ -67,12 +67,17 @@ function init(self)
         self._lastLoadingTrack = d.loading or self._lastLoadingTrack
         local streamChanged = d.stream and d.stream ~= self._lastStreamMarker
         if d.playback_state and d.playback_state ~= self._lastPlaybackState then
-            if d.playback_state == "paused" or d.playback_state == "stopped" then
+            if d.playback_state == "paused" then
                 Log.logger("SpotifyConnect"):info("remote playback state: ", d.playback_state)
+                self.playback:pause()
+            elseif d.playback_state == "stopped" then
+                Log.logger("SpotifyConnect"):info("remote playback state: stopped")
                 self.playback:stop()
             elseif d.playback_state == "playing" and self._lastPlaybackState == "paused" and not streamChanged then
                 Log.logger("SpotifyConnect"):info("remote playback resumed")
-                self.playback:start("127.0.0.1", 17880, "/spotify.ogg")
+                if not self.playback:resume() then
+                    self.playback:start("127.0.0.1", 17880, "/spotify.ogg")
+                end
             end
         end
         self._lastPlaybackState = d.playback_state or self._lastPlaybackState

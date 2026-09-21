@@ -11,6 +11,7 @@ oo.class(_M)
 function init(self, applet)
     self.applet = applet
     self.playback = nil
+    self.paused = false
 end
 
 function start(self, host, port, path)
@@ -18,6 +19,7 @@ function start(self, host, port, path)
     if not player then return false end
     self.playback = player.playback
     if not self.playback then return false end
+    self.paused = false
     self.playback:stopInternal()
     if player.incrementSequenceNumber then player:incrementSequenceNumber() end
     self.playback.flags = 0
@@ -59,4 +61,28 @@ end
 
 function stop(self)
     if self.playback then self.playback:stopInternal(); self.playback = nil end
+    self.paused = false
+end
+
+function pause(self)
+    if not self.playback then return false end
+    local player = Player:getLocalPlayer()
+    if not player or player.playback ~= self.playback then return false end
+    self.playback:pause()
+    self.paused = true
+    return true
+end
+
+function resume(self)
+    if not self.playback or not self.paused then return false end
+    local player = Player:getLocalPlayer()
+    if not player or player.playback ~= self.playback or not self.playback.stream then
+        self.paused = false
+        return false
+    end
+    decode:resumeAudio()
+    self.playback.sentResume = true
+    self.playback.sentDecoderFullEvent = true
+    self.paused = false
+    return true
 end

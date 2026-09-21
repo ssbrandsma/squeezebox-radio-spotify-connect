@@ -50,9 +50,9 @@ def test_status_reader_with_volume_and_track_changes():
 def test_watcher_switches_tracks_and_applies_u16_volume():
     lua = LuaRuntime(unpack_returned_tuples=True)
     lua.execute('''
-        timers, volumes = {}, {}
-        data = {loading = nil, stream = nil, playback_state = 'playing', volume = 32768}
-        starts, stops = 0, 0
+            timers, volumes = {}, {}
+            data = {loading = nil, stream = nil, playback_state = 'playing', volume = 32768}
+            starts, stops, pauses, resumes = 0, 0, 0, 0
         package.loaded['loop.simple'] = { class = function() end }
         package.loaded['jive.Applet'] = {}
         package.loaded['jive.ui.Framework'] = { constants = function() end }
@@ -81,10 +81,12 @@ def test_watcher_switches_tracks_and_applies_u16_volume():
         package.loaded['applets.SpotifyConnect.SpotifyService'] = function()
             return {init=function() end, eventData=function() return data end}
         end
-        package.loaded['applets.SpotifyConnect.SpotifyPlayback'] = function()
-            return {init=function() end, stop=function() stops=stops+1 end,
-                    setRemoteVolume=function(_, v) table.insert(volumes, v); return true end,
-                    start=function() starts=starts+1 end}
+            package.loaded['applets.SpotifyConnect.SpotifyPlayback'] = function()
+                return {init=function() end, stop=function() stops=stops+1 end,
+                        pause=function() pauses=pauses+1; return true end,
+                        resume=function() resumes=resumes+1; return true end,
+                        setRemoteVolume=function(_, v) table.insert(volumes, v); return true end,
+                        start=function() starts=starts+1 end}
         end
         package.loaded['applets.SpotifyConnect.SpotifyNowPlaying'] = {new=function() return {} end}
         package.loaded['applets.SpotifyConnect.SpotifyConnectState'] = {}
@@ -115,10 +117,12 @@ def test_watcher_switches_tracks_and_applies_u16_volume():
     assert lua.globals().volumes[2] == 0
     lua.globals().data.playback_state = 'paused'
     watcher.callback()
-    assert lua.globals().stops == 1
+    assert lua.globals().stops == 0
+    assert lua.globals().pauses == 1
     lua.globals().data.playback_state = 'playing'
     watcher.callback()
-    assert lua.globals().starts == 2
+    assert lua.globals().resumes == 1
+    assert lua.globals().starts == 1
     lua.globals().data.volume = 100
     watcher.callback()
     assert lua.globals().volumes[3] == 0  # u16 value, never interpreted as 100%
@@ -131,8 +135,14 @@ def test_local_volume_uses_firmware_curve_and_explicit_mute():
         package.loaded['squeezeplay.stream'] = {}
         package.loaded['squeezeplay.decode'] = {audioGain=function(_, l, r)
             gainL, gainR = l, r
+        end, resumeAudio=function()
+            nativeResumes = nativeResumes + 1
         end}
-        pb = {_getGainFromVolume=function(_, v) return v * 100 end}
+        nativeResumes = 0
+        pb = {_getGainFromVolume=function(_, v) return v * 100 end,
+              pause=function() nativePauses = nativePauses + 1 end,
+              stream={}}
+        nativePauses = 0
         player = {playback=pb, volumeLocal=function(_, v, seq, stateOnly)
             stored, sequenceAdvanced, storedOnly = v, seq, stateOnly
         end}
@@ -151,3 +161,9 @@ def test_local_volume_uses_firmware_curve_and_explicit_mute():
     assert playback.setRemoteVolume(playback, 0) is True
     assert lua.globals().gainL == 0
     assert lua.globals().gainR == 0
+    assert playback.pause(playback) is True
+    assert lua.globals().nativePauses == 1
+    assert playback.resume(playback) is True
+    assert lua.globals().nativeResumes == 1
+    assert playback.playback.sentResume is True
+    assert playback.playback.sentDecoderFullEvent is True

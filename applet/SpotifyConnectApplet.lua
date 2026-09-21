@@ -57,6 +57,7 @@ function init(self)
     self.nowPlaying = SpotifyNowPlaying.new(self, Log.logger("SpotifyConnect"))
     self._lastLoadingTrack = nil
     self._lastStreamMarker = nil
+    self._lastPlaybackState = nil
     self._lastRemoteVolume = nil
     self._trackWatcher = Timer(100, function()
         local d = self.service:eventData()
@@ -65,7 +66,18 @@ function init(self)
             self.playback:stop()
         end
         self._lastLoadingTrack = d.loading or self._lastLoadingTrack
-        if d.stream and d.stream ~= self._lastStreamMarker then
+        local streamChanged = d.stream and d.stream ~= self._lastStreamMarker
+        if d.playback_state and d.playback_state ~= self._lastPlaybackState then
+            if d.playback_state == "paused" or d.playback_state == "stopped" then
+                Log.logger("SpotifyConnect"):info("remote playback state: ", d.playback_state)
+                self.playback:stop()
+            elseif d.playback_state == "playing" and self._lastPlaybackState == "paused" and not streamChanged then
+                Log.logger("SpotifyConnect"):info("remote playback resumed")
+                self.playback:start("127.0.0.1", 17880, "/spotify.ogg")
+            end
+        end
+        self._lastPlaybackState = d.playback_state or self._lastPlaybackState
+        if streamChanged then
             Log.logger("SpotifyConnect"):info("stream ready: ", d.stream, "; starting local playback")
             self.playback:start("127.0.0.1", 17880, "/spotify.ogg")
         end

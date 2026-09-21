@@ -43,6 +43,7 @@ def test_status_reader_with_volume_and_track_changes():
     events = service.eventData(service)
     assert events.loading == "loading-track"
     assert events.stream == "2:1234"
+    assert events.playback_state == "stopped"
     assert events.volume == 65535
 
 
@@ -50,7 +51,7 @@ def test_watcher_switches_tracks_and_applies_u16_volume():
     lua = LuaRuntime(unpack_returned_tuples=True)
     lua.execute('''
         timers, volumes = {}, {}
-        data = {loading = nil, stream = nil, volume = 32768}
+        data = {loading = nil, stream = nil, playback_state = 'playing', volume = 32768}
         starts, stops = 0, 0
         package.loaded['loop.simple'] = { class = function() end }
         package.loaded['jive.Applet'] = {}
@@ -106,6 +107,12 @@ def test_watcher_switches_tracks_and_applies_u16_volume():
     assert lua.globals().stops == 1
     assert lua.globals().starts == 1
     assert lua.globals().volumes[2] == 0
+    lua.globals().data.playback_state = 'paused'
+    watcher.callback()
+    assert lua.globals().stops == 2
+    lua.globals().data.playback_state = 'playing'
+    watcher.callback()
+    assert lua.globals().starts == 2
     lua.globals().data.volume = 100
     watcher.callback()
     assert lua.globals().volumes[3] == 0  # u16 value, never interpreted as 100%

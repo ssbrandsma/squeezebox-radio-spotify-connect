@@ -1,6 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path $PSScriptRoot -Parent
 $Out = Join-Path $PSScriptRoot 'out/applet/SpotifyConnect'
+if (Test-Path -LiteralPath $Out) { Remove-Item -LiteralPath $Out -Recurse -Force }
 New-Item -ItemType Directory -Force $Out | Out-Null
 Copy-Item "$Root/applet/*.lua","$Root/applet/strings.txt" $Out -Force
 Copy-Item "$Root/applet/spotify-metadata-event" "$Out/spotify-metadata-event" -Force

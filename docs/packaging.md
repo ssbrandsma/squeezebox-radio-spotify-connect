@@ -1,9 +1,15 @@
 # Packaging
 
-`build/package.ps1` creates `dist/SpotifyConnect-0.1.0.zip` from the applet and
-native files, and writes the SHA1 of `dist/extensions.xml`. The archive contains
-only applet Lua, strings, native test binaries, and metadata. Credentials,
-research evidence, PC artifacts, and source checkouts are excluded.
+`build/package.ps1` reads `VERSION`, creates the matching
+`dist/SpotifyConnect-<version>.zip`, and generates Applet Installer repository
+metadata in `dist/extensions.xml`. The XML contains the release URL and SHA-1
+of the ZIP; `dist/extensions.xml.sha1` contains the SHA-1 of the XML itself.
+The archive contains only the applet Lua, strings, artwork, event hook, and
+four ARM runtime executables. Credentials, research evidence, test binaries,
+PC artifacts, and source checkouts are excluded.
+
+By default, package URLs point to the matching tag under this project's GitHub
+Releases. Pass `-BaseUrl` when publishing the files through another web server.
 
 Applet-owned executables install under
 `/usr/share/jive/applets/SpotifyConnect/`. The applet applies `chmod 755`

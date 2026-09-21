@@ -39,6 +39,7 @@ use thiserror::Error;
 // these limitations are essential, otherwise to many tracks will overload the web-player
 const SPOTIFY_MAX_PREV_TRACKS_SIZE: usize = 10;
 const SPOTIFY_MAX_NEXT_TRACKS_SIZE: usize = 80;
+const CONNECT_STATE_UPDATE_TIMEOUT: Duration = Duration::from_secs(2);
 
 #[derive(Debug, Error)]
 pub(super) enum StateError {
@@ -494,9 +495,18 @@ impl ConnectState {
 
     /// Sends the connect state for the connect session to the remote server
     pub async fn send_state(&self, session: &Session) -> SpClientResult {
-        session
-            .spclient()
-            .put_connect_state_request(&self.request)
-            .await
+        match tokio::time::timeout(
+            CONNECT_STATE_UPDATE_TIMEOUT,
+            session
+                .spclient()
+                .put_connect_state_request(&self.request),
+        )
+        .await
+        {
+            Ok(result) => result,
+            Err(_) => Err(Error::deadline_exceeded(
+                "connect-state update exceeded the two-second command budget",
+            )),
+        }
     }
 }

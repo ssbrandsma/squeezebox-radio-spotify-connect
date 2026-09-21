@@ -12,5 +12,13 @@
       <url>http://49.12.198.91/sbspotifyconnect/SpotifyConnect-0.5.0.zip</url>
       <sha>3cfb7debb244514988dce1d2dc1b4c469a886409</sha>
     </applet>
+    <applet name="SpotifyConnect" version="0.5.0" target="fab4" minTarget="7.7" maxTarget="*">
+      <title lang="EN">Spotify Connect</title>
+      <desc lang="EN">Standalone Spotify Connect playback for Logitech Squeezebox Touch. LMS is only needed to install the applet.</desc>
+      <changes lang="EN">Responsive playback controls, remote volume, pairing QR code, and redesigned Now Playing screen.</changes>
+      <creator>Sjoerd Brandsma</creator>
+      <url>http://49.12.198.91/sbspotifyconnect/SpotifyConnect-0.5.0.zip</url>
+      <sha>3cfb7debb244514988dce1d2dc1b4c469a886409</sha>
+    </applet>
   </applets>
 </extensions>

@@ -98,6 +98,14 @@ $Xml = @"
       <url>$(& $Escape $ZipUrl)</url>
       <sha>$ZipSha1</sha>
     </applet>
+    <applet name="SpotifyConnect" version="$(& $Escape $Version)" target="fab4" minTarget="7.7" maxTarget="*">
+      <title lang="EN">Spotify Connect</title>
+      <desc lang="EN">Standalone Spotify Connect playback for Logitech Squeezebox Touch. LMS is only needed to install the applet.</desc>
+      <changes lang="EN">Responsive playback controls, remote volume, pairing QR code, and redesigned Now Playing screen.</changes>
+      <creator>Sjoerd Brandsma</creator>
+      <url>$(& $Escape $ZipUrl)</url>
+      <sha>$ZipSha1</sha>
+    </applet>
   </applets>
 </extensions>
 "@
@@ -108,9 +116,15 @@ $XmlSha1 = (Get-FileHash -LiteralPath $XmlPath -Algorithm SHA1).Hash.ToLowerInva
 [System.IO.File]::WriteAllText((Join-Path $OutputDirectory 'extensions.xml.sha1'), $XmlSha1, $Utf8NoBom)
 
 [xml]$Parsed = Get-Content -LiteralPath $XmlPath -Raw
-$Applet = $Parsed.extensions.applets.applet
-if ($Applet.name -ne 'SpotifyConnect' -or $Applet.version -ne $Version -or $Applet.target -ne 'baby' -or $Applet.url -ne $ZipUrl -or $Applet.sha -ne $ZipSha1) {
-    throw 'Generated extensions.xml did not round-trip with the expected package metadata'
+$Applets = @($Parsed.extensions.applets.applet)
+if ($Applets.Count -ne 2) {
+    throw 'Generated extensions.xml must contain exactly two SpotifyConnect targets'
+}
+foreach ($Target in @('baby', 'fab4')) {
+    $Applet = @($Applets | Where-Object { $_.target -eq $Target })
+    if ($Applet.Count -ne 1 -or $Applet[0].name -ne 'SpotifyConnect' -or $Applet[0].version -ne $Version -or $Applet[0].url -ne $ZipUrl -or $Applet[0].sha -ne $ZipSha1) {
+        throw "Generated extensions.xml did not round-trip with the expected $Target package metadata"
+    }
 }
 
 Write-Host 'Built Spotify Connect Applet Installer package'

@@ -8,6 +8,9 @@ The archive contains only the applet Lua, strings, artwork, event hook, and
 four ARM runtime executables. Credentials, research evidence, test binaries,
 PC artifacts, and source checkouts are excluded.
 
+The repository advertises the same package for the Squeezebox Radio (`baby`)
+and Squeezebox Touch (`fab4`) targets.
+
 By default, package URLs point to
 `http://49.12.198.91/sbspotifyconnect`. Publish both `extensions.xml` and the
 versioned ZIP in the server's `sbspotifyconnect` web directory so the stock

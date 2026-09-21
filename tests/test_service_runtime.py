@@ -101,15 +101,21 @@ def test_watcher_switches_tracks_and_applies_u16_volume():
     assert lua.globals().volumes[1] == 50
     assert lua.globals().popups == 1
     lua.globals().data.loading = 'second'
-    lua.globals().data.stream = '1:22'
     lua.globals().data.volume = 0
     watcher.callback()
-    assert lua.globals().stops == 1
+    # Keep the existing HTTP client alive until the bridge observes the new
+    # Ogg stream. Closing it on "loading" makes the bounded bridge retain an
+    # old page while the applet waits forever for the new stream marker.
+    assert lua.globals().stops == 0
+    assert lua.globals().starts == 0
+    lua.globals().data.stream = '1:22'
+    watcher.callback()
+    assert lua.globals().stops == 0
     assert lua.globals().starts == 1
     assert lua.globals().volumes[2] == 0
     lua.globals().data.playback_state = 'paused'
     watcher.callback()
-    assert lua.globals().stops == 2
+    assert lua.globals().stops == 1
     lua.globals().data.playback_state = 'playing'
     watcher.callback()
     assert lua.globals().starts == 2

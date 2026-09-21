@@ -63,7 +63,6 @@ function init(self)
         local d = self.service:eventData()
         if d.loading and d.loading ~= self._lastLoadingTrack then
             Log.logger("SpotifyConnect"):info("track loading: ", d.loading)
-            self.playback:stop()
         end
         self._lastLoadingTrack = d.loading or self._lastLoadingTrack
         local streamChanged = d.stream and d.stream ~= self._lastStreamMarker

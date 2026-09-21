@@ -102,7 +102,7 @@ function start(self, pairing)
     os.execute("for n in ogg-http-bridge librespot spotify-supervisor; do for p in `pidof $n 2>/dev/null`; do kill -KILL $p 2>/dev/null; done; done; rm -f " .. q(PID) .. " " .. q(BPID) .. " " .. q(FIFO))
     os.execute("mkdir -p " .. q(USER) .. "; chmod 700 " .. q(USER) .. "; rm -f " .. q(STATUS) .. " " .. q(METADATA) .. " " .. q(METADATA_STATE) .. " " .. q(METADATA_VOLUME) .. " " .. q(METADATA_LOADING) .. " " .. q(STREAM_MARKER))
     os.execute("test -p " .. q(FIFO) .. " || mkfifo " .. q(FIFO) .. "; chmod 600 " .. q(FIFO))
-    os.execute("( exec 3<>" .. q(FIFO) .. "; exec " .. q(ROOT .. "/ogg-http-bridge") .. " 17880 --stream-marker " .. q(STREAM_MARKER) .. " <" .. q(FIFO) .. " >>" .. q(LOG) .. " 2>&1 ) & echo $! >" .. q(BPID))
+    os.execute("( exec 3<>" .. q(FIFO) .. "; exec " .. q(ROOT .. "/ogg-http-bridge") .. " 17880 --stream-marker " .. q(STREAM_MARKER) .. " --loading-marker " .. q(METADATA_LOADING) .. " <" .. q(FIFO) .. " >>" .. q(LOG) .. " 2>&1 ) & echo $! >" .. q(BPID))
     local auth = ""; if pairing or not self:credentialsExist() then auth = " --enable-device-auth" end
     local settings = self.applet._settings or {}
     local name = settings.deviceName or "Squeezebox Radio"

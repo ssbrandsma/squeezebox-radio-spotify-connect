@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 
 const MAX_PAGE: usize = 27 + 255 + 255 * 255;
 const MAX_HEADERS: usize = 65536;
+const STARTUP_LEAD_MS: u64 = 3000;
 
 unsafe extern "C" {
     fn setsockopt(fd: i32, level: i32, option: i32, value: *const i32, length: u32) -> i32;
@@ -118,11 +119,19 @@ fn write_marker(path: &Path, generation: u64, serial: u32) -> io::Result<()> {
     fs::rename(tmp, path)
 }
 
+fn read_marker(path: &Path) -> Option<String> {
+    fs::read_to_string(path)
+        .ok()
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+}
+
 fn main() -> io::Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let port = args.first().filter(|s| !s.starts_with("--")).cloned().unwrap_or_else(|| "17880".into());
     let paced = !args.iter().any(|a| a == "--unpaced");
     let marker = args.windows(2).find(|w| w[0] == "--stream-marker").map(|w| PathBuf::from(&w[1]));
+    let loading_marker = args.windows(2).find(|w| w[0] == "--loading-marker").map(|w| PathBuf::from(&w[1]));
     let listener = TcpListener::bind(format!("127.0.0.1:{port}"))?;
     listener.set_nonblocking(true)?;
     eprintln!("[BRIDGE] listening 127.0.0.1:{port}; stdin producer; page={MAX_PAGE} header={MAX_HEADERS} queue=1");
@@ -144,7 +153,22 @@ fn main() -> io::Result<()> {
     let mut last_log = Instant::now();
     let mut timeline: Option<(Instant, u64)> = None;
     let mut generation = 0u64;
+    let mut last_loading: Option<String> = None;
+    let mut discard_until_bos = false;
     loop {
+        if let Some(loading) = loading_marker.as_deref().and_then(read_marker) {
+            if last_loading.as_deref() != Some(loading.as_str()) {
+                eprintln!("[BRIDGE] loading {loading}; discarding queued previous stream");
+                last_loading = Some(loading);
+                discard_until_bos = true;
+                pending = None;
+                offset = 0;
+                timeline = None;
+                if client.take().is_some() {
+                    eprintln!("[BRIDGE] loading marker closed previous client");
+                }
+            }
+        }
         if client.is_none() {
             match listener.accept() {
                 Ok((socket, _)) => match accept_http(socket) {
@@ -164,13 +188,20 @@ fn main() -> io::Result<()> {
         }
         // Hold the next audio page until a client arrives. This preserves a
         // complete start for a late first client, with bounded backpressure.
-        if pending.is_some() && client.is_none() {
+        if pending.is_some() && client.is_none() && !discard_until_bos {
             std::thread::sleep(Duration::from_millis(100));
             continue;
         }
         if pending.is_none() {
             match rx.recv_timeout(Duration::from_millis(100)) {
                 Ok(Ok(Some(p))) => {
+                    let is_bos = p[5] & 2 != 0;
+                    if discard_until_bos && !is_bos {
+                        continue;
+                    }
+                    if is_bos {
+                        discard_until_bos = false;
+                    }
                     let is_header = p[5] & 2 != 0 || headers.packets < 3;
                     if p[5] & 2 != 0 {
                         timeline = None;
@@ -211,9 +242,10 @@ fn main() -> io::Result<()> {
                 if gp != u64::MAX {
                     let (epoch, base) = *timeline.get_or_insert((Instant::now(), gp));
                     let due_ms = gp.saturating_sub(base).saturating_mul(1000) / headers.rate as u64;
-                    // One second of lead, plus the first page, covers decoder
-                    // startup without filling the stock multi-megabyte buffer.
-                    let due = Duration::from_millis(due_ms.saturating_sub(1000));
+                    // A short bounded lead fills the stock decoder quickly.
+                    // Loading-marker draining prevents this lead and the FIFO
+                    // from delaying the next track.
+                    let due = Duration::from_millis(due_ms.saturating_sub(STARTUP_LEAD_MS));
                     if let Some(wait) = due.checked_sub(epoch.elapsed()) {
                         std::thread::sleep(wait.min(Duration::from_millis(100)));
                         continue;

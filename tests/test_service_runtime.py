@@ -29,6 +29,8 @@ def test_status_reader_with_volume_and_track_changes():
     files[base + "metadata.json"] = "{}"
     files[base + "metadata.json.state"] = "playing\n"
     files[base + "metadata.json.volume"] = "38911"
+    files[base + "metadata.json.loading"] = "loading-track\n"
+    files[base + "stream.ready"] = "2:1234\n"
     for state, track, volume in [('playing', 'first', 38911), ('paused', 'second', 0), ('stopped', 'third', 65535)]:
         files[base + "metadata.json.state"] = state
         files[base + "metadata.json.volume"] = str(volume)
@@ -38,34 +40,54 @@ def test_status_reader_with_volume_and_track_changes():
         assert data.track_id == track
         assert data.volume == volume
         assert data.title == 'Title with "quotes"'
+    events = service.eventData(service)
+    assert events.loading == "loading-track"
+    assert events.stream == "2:1234"
+    assert events.volume == 65535
 
 
 def test_watcher_switches_tracks_and_applies_u16_volume():
     lua = LuaRuntime(unpack_returned_tuples=True)
     lua.execute('''
         timers, volumes = {}, {}
-        data = {track_id = 'first', volume = 32768}
+        data = {loading = nil, stream = nil, volume = 32768}
         starts, stops = 0, 0
         package.loaded['loop.simple'] = { class = function() end }
         package.loaded['jive.Applet'] = {}
         package.loaded['jive.ui.Framework'] = { constants = function() end }
         package.loaded['jive.ui.SimpleMenu'] = {}
         package.loaded['jive.ui.Window'] = {}
+        package.loaded['jive.ui.Popup'] = function()
+            return {setAutoHide=function() end, setAlwaysOnTop=function() end,
+                    addWidget=function() end, focusWidget=function() end,
+                    showBriefly=function(_, _, callback) popups=popups+1 end}
+        end
+        package.loaded['jive.ui.Group'] = function(_, value) return value end
+        package.loaded['jive.ui.Icon'] = function()
+            return {setStyle=function() end}
+        end
+        package.loaded['jive.ui.Label'] = function()
+            return {setValue=function() end}
+        end
+        package.loaded['jive.ui.Slider'] = function()
+            return {setValue=function() end}
+        end
         package.loaded['jive.utils.log'] = {logger = function() return {info=function() end} end}
         package.loaded['jive.ui.Timer'] = function(ms, callback, once)
             local t = {ms=ms, callback=callback, once=once, start=function() end}
             table.insert(timers, t); return t
         end
         package.loaded['applets.SpotifyConnect.SpotifyService'] = function()
-            return {init=function() end, statusData=function() return data end}
+            return {init=function() end, eventData=function() return data end}
         end
         package.loaded['applets.SpotifyConnect.SpotifyPlayback'] = function()
             return {init=function() end, stop=function() stops=stops+1 end,
-                    setRemoteVolume=function(_, v) table.insert(volumes, v) end,
+                    setRemoteVolume=function(_, v) table.insert(volumes, v); return true end,
                     start=function() starts=starts+1 end}
         end
         package.loaded['applets.SpotifyConnect.SpotifyNowPlaying'] = {new=function() return {} end}
         package.loaded['applets.SpotifyConnect.SpotifyConnectState'] = {}
+        popups = 0
         package.loaded['jive.slim.Player'] = {getLocalPlayer=function()
             return {volumeLocal=function(_, v) table.insert(volumes, v) end}
         end}
@@ -76,11 +98,12 @@ def test_watcher_switches_tracks_and_applies_u16_volume():
     watcher = applet._trackWatcher
     watcher.callback()
     assert lua.globals().volumes[1] == 50
-    lua.globals().data.track_id = 'second'
+    assert lua.globals().popups == 1
+    lua.globals().data.loading = 'second'
+    lua.globals().data.stream = '1:22'
     lua.globals().data.volume = 0
     watcher.callback()
     assert lua.globals().stops == 1
-    lua.globals().timers[2].callback()
     assert lua.globals().starts == 1
     assert lua.globals().volumes[2] == 0
     lua.globals().data.volume = 100

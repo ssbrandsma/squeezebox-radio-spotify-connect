@@ -1,7 +1,9 @@
 //! Bounded, single-client Ogg HTTP bridge. No decoder and no audio files.
+use std::fs;
 use std::io::{self, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::os::fd::AsRawFd;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, RecvTimeoutError};
 use std::time::{Duration, Instant};
 
@@ -110,9 +112,17 @@ fn accept_http(mut s: TcpStream) -> io::Result<TcpStream> {
     Ok(s)
 }
 
+fn write_marker(path: &Path, generation: u64, serial: u32) -> io::Result<()> {
+    let tmp = path.with_extension("tmp");
+    fs::write(&tmp, format!("{generation}:{serial}\n"))?;
+    fs::rename(tmp, path)
+}
+
 fn main() -> io::Result<()> {
-    let port = std::env::args().nth(1).unwrap_or_else(|| "17880".into());
-    let paced = !std::env::args().any(|a| a == "--unpaced");
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let port = args.first().filter(|s| !s.starts_with("--")).cloned().unwrap_or_else(|| "17880".into());
+    let paced = !args.iter().any(|a| a == "--unpaced");
+    let marker = args.windows(2).find(|w| w[0] == "--stream-marker").map(|w| PathBuf::from(&w[1]));
     let listener = TcpListener::bind(format!("127.0.0.1:{port}"))?;
     listener.set_nonblocking(true)?;
     eprintln!("[BRIDGE] listening 127.0.0.1:{port}; stdin producer; page={MAX_PAGE} header={MAX_HEADERS} queue=1");
@@ -133,6 +143,7 @@ fn main() -> io::Result<()> {
     let mut forwarded = 0u64;
     let mut last_log = Instant::now();
     let mut timeline: Option<(Instant, u64)> = None;
+    let mut generation = 0u64;
     loop {
         if client.is_none() {
             match listener.accept() {
@@ -171,7 +182,15 @@ fn main() -> io::Result<()> {
                         }
                         pending = None;
                     }
+                    let had_headers = headers.packets == 3;
                     headers.observe(&p)?;
+                    if !had_headers && headers.packets == 3 {
+                        generation += 1;
+                        if let (Some(path), Some(serial)) = (marker.as_deref(), headers.serial) {
+                            write_marker(path, generation, serial)?;
+                            eprintln!("[BRIDGE] stream ready generation={generation} serial={serial}");
+                        }
+                    }
                     if client.is_some() || !is_header {
                         pending = Some(p);
                         pending_header = is_header;

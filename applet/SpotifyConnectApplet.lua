@@ -3,6 +3,11 @@ local Applet = require("jive.Applet")
 local Framework = require("jive.ui.Framework")
 local SimpleMenu = require("jive.ui.SimpleMenu")
 local Window = require("jive.ui.Window")
+local Popup = require("jive.ui.Popup")
+local Group = require("jive.ui.Group")
+local Icon = require("jive.ui.Icon")
+local Label = require("jive.ui.Label")
+local Slider = require("jive.ui.Slider")
 local SpotifyService = require("applets.SpotifyConnect.SpotifyService")
 local SpotifyPlayback = require("applets.SpotifyConnect.SpotifyPlayback")
 local SpotifyNowPlaying = require("applets.SpotifyConnect.SpotifyNowPlaying")
@@ -11,9 +16,36 @@ local Timer = require("jive.ui.Timer")
 local math = require("math")
 local Log = require("jive.utils.log")
 local state = require("applets.SpotifyConnect.SpotifyConnectState")
+local tostring = tostring
 
 module(..., Framework.constants)
 oo.class(_M, Applet)
+
+local function showRemoteVolume(self, percent)
+    if not self._volumePopup then
+        local popup = Popup("slider_popup")
+        popup:setAutoHide(false)
+        popup:setAlwaysOnTop(true)
+        self._volumeTitle = Label("heading", "")
+        self._volumeIcon = Icon("icon_popup_volume")
+        self._volumeSlider = Slider("volume_slider", -1, 100, percent, function() end)
+        popup:addWidget(self._volumeTitle)
+        popup:addWidget(self._volumeIcon)
+        popup:addWidget(Group("slider_group", { slider = self._volumeSlider }))
+        popup:focusWidget(nil)
+        self._volumePopup = popup
+    end
+    self._volumeTitle:setValue(percent == 0 and "Muted" or tostring(percent))
+    self._volumeIcon:setStyle(percent == 0 and "icon_popup_mute" or "icon_popup_volume")
+    self._volumeSlider:setValue(percent)
+    local popup = self._volumePopup
+    popup:showBriefly(1800, function()
+        if self._volumePopup == popup then
+            self._volumePopup, self._volumeTitle = nil, nil
+            self._volumeIcon, self._volumeSlider = nil, nil
+        end
+    end, Window.transitionNone, Window.transitionNone)
+end
 
 function init(self)
     self._settings = self._settings or { enabled = false, deviceName = "Squeezebox Radio" }
@@ -23,23 +55,27 @@ function init(self)
     self.playback = SpotifyPlayback()
     self.playback:init(self)
     self.nowPlaying = SpotifyNowPlaying.new(self, Log.logger("SpotifyConnect"))
-    self._lastTrackId = nil
+    self._lastLoadingTrack = nil
+    self._lastStreamMarker = nil
     self._lastRemoteVolume = nil
-    self._trackWatcher = Timer(500, function()
-        local d = self.service:statusData()
-        if d.track_id and self._lastTrackId and d.track_id ~= self._lastTrackId then
-            Log.logger("SpotifyConnect"):info("track changed; reconnecting local playback")
+    self._trackWatcher = Timer(100, function()
+        local d = self.service:eventData()
+        if d.loading and d.loading ~= self._lastLoadingTrack then
+            Log.logger("SpotifyConnect"):info("track loading: ", d.loading)
             self.playback:stop()
-            Timer(50, function()
-                self.playback:start("127.0.0.1", 17880, "/spotify.ogg")
-            end, true):start()
         end
-        self._lastTrackId = d.track_id or self._lastTrackId
+        self._lastLoadingTrack = d.loading or self._lastLoadingTrack
+        if d.stream and d.stream ~= self._lastStreamMarker then
+            Log.logger("SpotifyConnect"):info("stream ready: ", d.stream, "; starting local playback")
+            self.playback:start("127.0.0.1", 17880, "/spotify.ogg")
+        end
+        self._lastStreamMarker = d.stream or self._lastStreamMarker
         if d.volume and d.volume ~= self._lastRemoteVolume then
             local percent = math.floor((d.volume * 100 / 65535) + 0.5)
             percent = math.max(0, math.min(100, percent))
             local applied = self.playback:setRemoteVolume(percent)
             Log.logger("SpotifyConnect"):info("remote volume: ", percent, " applied=", applied)
+            if applied then showRemoteVolume(self, percent) end
             self._lastRemoteVolume = d.volume
         end
     end)

@@ -12,6 +12,12 @@ fn main() -> std::io::Result<()> {
         fs::write(volume_path, env::var("VOLUME").unwrap_or_default().as_bytes())?;
         return Ok(());
     }
+    if event == "loading" {
+        let loading_path = format!("{}.loading", path);
+        let tmp = format!("{}.tmp", loading_path);
+        fs::write(&tmp, env::var("TRACK_ID").unwrap_or_default().as_bytes())?;
+        fs::rename(tmp, loading_path)?;
+    }
     let state = match event.as_str() {
         "paused" => "paused",
         "stopped" | "end_of_track" | "unavailable" => "stopped",
@@ -36,7 +42,6 @@ fn main() -> std::io::Result<()> {
     let tmp = format!("{}.tmp", path);
     let mut f = OpenOptions::new().create(true).write(true).truncate(true).open(&tmp)?;
     f.write_all(json.as_bytes())?;
-    f.sync_all()?;
     fs::rename(tmp, path)?;
     Ok(())
 }

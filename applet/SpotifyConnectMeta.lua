@@ -9,6 +9,7 @@ local qrencode = require("applets.SpotifyConnect.qrencode")
 local pcall = pcall
 local Timer = require("jive.ui.Timer")
 local jiveMain = jiveMain
+local appletManager = appletManager
 local EVENT_WINDOW_POP = jive.ui.EVENT_WINDOW_POP
 local state = require("applets.SpotifyConnect.SpotifyConnectState")
 module(...)
@@ -59,6 +60,10 @@ local function showPairing(self, applet)
 end
 
 function registerApplet(self)
+    -- This applet owns a background service, so instantiate it during boot.
+    -- Merely registering the menu leaves saved enabled accounts offline until
+    -- the user opens the menu for the first time.
+    appletManager:loadApplet("SpotifyConnect")
     jiveMain:addItem(self:menuItem("spotifyConnect", "home", "SPOTIFY_CONNECT", function()
         local applet = state.applet
         local service = state.service

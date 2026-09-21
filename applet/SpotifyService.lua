@@ -31,6 +31,7 @@ function isRunning(self)
     return os.execute("test -s " .. q(PID) .. " && p=`cat " .. q(PID) .. "` && kill -0 $p 2>/dev/null && tr '\\000' ' ' < /proc/$p/cmdline 2>/dev/null | grep -q spotify-supervisor") == 0
 end
 function status(self)
+    if not self:isRunning() then return "not_connected" end
     local f = io.open(STATUS, "r"); if not f then return "not_connected" end
     local s = f:read("*a"); f:close(); return s:match('"state":"([^"]+)"') or "starting"
 end

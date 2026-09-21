@@ -9,6 +9,7 @@ local qrencode = require("applets.SpotifyConnect.qrencode")
 local pcall = pcall
 local Timer = require("jive.ui.Timer")
 local jiveMain = jiveMain
+local EVENT_WINDOW_POP = jive.ui.EVENT_WINDOW_POP
 local state = require("applets.SpotifyConnect.SpotifyConnectState")
 module(...)
 oo.class(_M, AppletMeta)
@@ -46,7 +47,7 @@ local function showPairing(self, applet)
             local surface = makeQrSurface(d.url)
             if surface then qr:setValue(surface) end
         end
-        label:setValue(d.state == "pairing" and ("Scan QR or open this address:\n" .. (d.url or "waiting") .. "\n\nWaiting for approval...") or (d.state == "connected" and "Connected\n\nSelect Squeezebox Radio in Spotify." or "Waiting for Spotify..."))
+        label:setValue(d.state == "pairing" and ("Scan QR or open this address:\n" .. (d.url or "waiting") .. "\n\nWaiting for approval...") or (d.state == "connected" and "Connected\n\nSelect Squeezebox Radio in Spotify." or (d.state == "error" and ("Connection failed\n\n" .. (d.message or "Unknown error") .. "\n\nPress Back and try Connect again.") or "Waiting for Spotify...")))
         if d.state == "connected" then
             local settings = applet._settings; settings.enabled = true
             self:storeSettings()
@@ -71,20 +72,20 @@ function registerApplet(self)
         end
         local statusItem = { text = "Status: " .. state, callback = function() showPairing(self, applet) end }
         menu:addItem(statusItem)
-        Timer(1000, function() menu:setText(statusItem, "Status: " .. service:status()) end):start()
+        local statusTimer = Timer(1000, function() menu:setText(statusItem, "Status: " .. service:status()) end)
+        statusTimer:start()
+        window:addListener(EVENT_WINDOW_POP, function() statusTimer:stop() end)
         menu:addItem({ text = "Device name: " .. ((applet._settings and applet._settings.deviceName) or "Squeezebox Radio") })
-        if service:isRunning() then
-            menu:addItem({ text = "Restart service", callback = function() service:restart() end })
-            local disconnectItem
-            disconnectItem = { text = "Disconnect account", callback = function()
-                service:disconnect()
-                local settings = applet._settings; settings.enabled = false; self:storeSettings()
-                menu:setText(disconnectItem, "Disconnected")
-                menu:setText(statusItem, "Status: not_connected")
-                Timer(2500, function() menu:setText(disconnectItem, "Disconnect account") end, true):start()
-            end }
-            menu:addItem(disconnectItem)
-        end
+        menu:addItem({ text = "Restart service", callback = function() service:restart() end })
+        local disconnectItem
+        disconnectItem = { text = "Disconnect account", callback = function()
+            service:disconnect()
+            local settings = applet._settings; settings.enabled = false; self:storeSettings()
+            menu:setText(disconnectItem, "Disconnected")
+            menu:setText(statusItem, "Status: not_connected")
+            Timer(2500, function() menu:setText(disconnectItem, "Disconnect account") end, true):start()
+        end }
+        menu:addItem(disconnectItem)
         window:show()
     end, 1))
 end

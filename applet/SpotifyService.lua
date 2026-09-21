@@ -84,7 +84,9 @@ function eventData(self)
     }
 end
 local function defaultName()
-    local f = io.open("/sys/class/net/wlan0/address", "r")
+    local f = io.open("/sys/class/net/eth1/address", "r") or
+        io.open("/sys/class/net/wlan0/address", "r") or
+        io.open("/sys/class/net/eth0/address", "r")
     if not f then return "Squeezebox Radio" end
     local mac = f:read("*a"); f:close(); mac = mac:gsub("%s", "")
     if #mac >= 2 then return "Squeezebox Radio-" .. mac:sub(-2):upper() end
@@ -92,6 +94,10 @@ local function defaultName()
 end
 function start(self, pairing)
     if self:isRunning() then return true end
+    -- A failed librespot launch can leave the independently running bridge
+    -- behind. Remove only processes owned by this applet before rebinding its
+    -- fixed localhost port; otherwise every retry fails with EADDRINUSE.
+    os.execute("for n in ogg-http-bridge librespot spotify-supervisor; do for p in `pidof $n 2>/dev/null`; do kill -KILL $p 2>/dev/null; done; done; rm -f " .. q(PID) .. " " .. q(BPID) .. " " .. q(FIFO))
     os.execute("mkdir -p " .. q(USER) .. "; chmod 700 " .. q(USER) .. "; rm -f " .. q(STATUS) .. " " .. q(METADATA) .. " " .. q(METADATA_STATE) .. " " .. q(METADATA_VOLUME) .. " " .. q(METADATA_LOADING) .. " " .. q(STREAM_MARKER))
     os.execute("test -p " .. q(FIFO) .. " || mkfifo " .. q(FIFO) .. "; chmod 600 " .. q(FIFO))
     os.execute("( exec 3<>" .. q(FIFO) .. "; exec " .. q(ROOT .. "/ogg-http-bridge") .. " 17880 --unpaced --stream-marker " .. q(STREAM_MARKER) .. " <" .. q(FIFO) .. " >>" .. q(LOG) .. " 2>&1 ) & echo $! >" .. q(BPID))
@@ -105,7 +111,7 @@ function start(self, pairing)
     os.execute(cmd); return true
 end
 function stop(self)
-    local cmd = "if test -s " .. q(PID) .. "; then kill -TERM `cat " .. q(PID) .. "` 2>/dev/null; fi; if test -s " .. q(BPID) .. "; then kill -TERM `cat " .. q(BPID) .. "` 2>/dev/null; fi; for p in `ps | grep '/usr/share/jive/applets/SpotifyConnect/librespot' | grep -v grep | awk '{print $1}'`; do kill -TERM $p 2>/dev/null; done; for p in `ps | grep '/usr/share/jive/applets/SpotifyConnect/ogg-http-bridge' | grep -v grep | awk '{print $1}'`; do kill -TERM $p 2>/dev/null; done; sleep 1; rm -f " .. q(PID) .. " " .. q(BPID) .. " " .. q(FIFO)
+    local cmd = "if test -s " .. q(PID) .. "; then kill -TERM `cat " .. q(PID) .. "` 2>/dev/null; fi; if test -s " .. q(BPID) .. "; then kill -TERM `cat " .. q(BPID) .. "` 2>/dev/null; fi; for n in ogg-http-bridge librespot spotify-supervisor; do for p in `pidof $n 2>/dev/null`; do kill -TERM $p 2>/dev/null; done; done; sleep 1; rm -f " .. q(PID) .. " " .. q(BPID) .. " " .. q(FIFO)
     os.execute(cmd .. "; rm -f " .. q(STATUS) .. " " .. q(METADATA) .. " " .. q(METADATA_STATE) .. " " .. q(METADATA_VOLUME) .. " " .. q(METADATA_LOADING) .. " " .. q(STREAM_MARKER))
 end
 function restart(self) self:stop(); Timer(400, function() self:start(false) end, true):start(); return true end

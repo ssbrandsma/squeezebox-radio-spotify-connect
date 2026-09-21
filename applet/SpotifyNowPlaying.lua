@@ -31,7 +31,7 @@ end
 function NowPlaying:_window()
     if self.window then return end
     local w = Window("linein", "Spotify Connect")
-    self.title = Label("text", "Spotify Connect"); self.info = Label("npartistalbum", "Waiting for Spotify..."); self.icon = Icon("icon")
+    self.title = Label("text", "Spotify Connect"); self.info = Label("npartistalbum", "Waiting for Spotify..."); self.icon = Icon("artwork")
     local fallback = loadImage(FALLBACK_ART)
     if fallback then self.surface = fallback; self.icon:setValue(fallback) end
     w:addWidget(Group("title", { lbutton = w:createDefaultLeftButton(), text = self.title, rbutton = nil }))
